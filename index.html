@@ -6,7 +6,7 @@
 	<body onload="init()">
 	<table style="width:100%; border-collapse:collapse; text-align:center;">
 	    <tr><td><h1>Average MPG analysis based on the fuel type</h1></td></tr>
-		<tr><td><svg/></td></tr>
+		<tr><td><svg></svg></td></tr>
 		<tr><td><div id="desc" style="margin-bottom: 25px;"></div></td></tr>
 		<tr><td>
 		<button onclick="loadPage(0)">1</button>
@@ -67,8 +67,8 @@
                         "Fuel: " + d.Fuel + "<br/>" +
                         "Highway MPG: " + d.AverageHighwayMPG + "<br/>" +
                         "City MPG: " + d.AverageCityMPG)
-                    .style("left", (d3.mouse(this)[0]+70) + "px")
-                    .style("top", (d3.mouse(this)[1]) + "px")
+                    .style("left", (d3.event.pageX + 20) + "px")
+                    .style("top", (d3.event.pageY + 20) + "px")
             }
             var mouseleave = function(d) {
                 tooltip
