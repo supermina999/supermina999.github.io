@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+	<head>
+	    <script src='https://d3js.org/d3.v5.min.js'></script>
+	</head>
+	<body onload="init()">
+	<table style="width:100%; border-collapse:collapse; text-align:center;">
+	    <tr><td><h1>Average MPG analysis based on the fuel type</h1></td></tr>
+		<tr><td><svg/></td></tr>
+		<tr><td><div id="desc" style="margin-bottom: 25px;"></div></td></tr>
+		<tr><td>
+		<button onclick="loadPage(0)">1</button>
+		<button onclick="loadPage(1)">2</button>
+		<button onclick="loadPage(2)">3</button>
+		</td></tr>
+		<script>
+		    datas = []
+		    avgCity = []
+		    avgHighway = []
+		    
+		    width = 600;
+		    height = 600;
+		    margin = 50;
+		    
+		    d3.select("svg").attr("width", width).attr("height", height)
+		    xScale = d3.scaleLinear().domain([0,130]).range([0, width - 2*margin]);
+		    yScale = d3.scaleLinear().domain([0,160]).range([height - margin*2, 0]);
+		    colorMap = {
+		        'Gasoline': 'red',
+		        'Diesel': 'green',
+		        'Electricity': 'blue'
+		    };
+		    opacityMap = {
+		        'Gasoline': '0.15',
+		        'Diesel': '0.9',
+		        'Electricity': '0.5'
+		    }
+		    texts = [
+		        "This chart shows the average MPG for the cars of different automakers running on gasoline. " + 
+		        "Please navigate to the next slide to see how the introduction of different fuels " + 
+		        "changes the efficiency.",
+		        "As you can see, the introduction of diesel fuel improved the average car efficiency, " +
+		        "however about half of them are extremely close to the average gasoline car.",
+		        "With the introduction of the electric fuel, efficiency of the cars dramatically increased, " +
+		        "and any electric car has larger MPG than any gasoline or diesel car. Additionally it's " +
+		        "worth noting that efficiency largely varies depending on a manufacturer."
+		    ];
+		    
+		    tooltip = d3.select("body").append("div")
+		        .style("position", "absolute")
+		        .style("opacity", "0")
+		        .style("background-color", "white")
+                .style("border", "solid")
+                .style("border-width", "2px")
+                .style("border-radius", "5px")
+                .style("padding", "5px");
+                
+            var mouseover = function(d) {
+                tooltip
+                    .style("opacity", 1)
+                d3.select(this)
+                    .style("stroke", "black")
+            }
+            var mousemove = function(d) {
+                tooltip
+                    .html("Make: " + d.Make + "<br/>" +
+                        "Fuel: " + d.Fuel + "<br/>" +
+                        "Highway MPG: " + d.AverageHighwayMPG + "<br/>" +
+                        "City MPG: " + d.AverageCityMPG)
+                    .style("left", (d3.mouse(this)[0]+70) + "px")
+                    .style("top", (d3.mouse(this)[1]) + "px")
+            }
+            var mouseleave = function(d) {
+                tooltip
+                    .style("opacity", 0)
+                d3.select(this)
+                    .style("stroke", "none")
+            }
+		    
+		    async function init() {
+		        data = await d3.csv("https://flunky.github.io/cars2017.csv");
+		        datas = []
+		        datas.push(data.filter(function(d) {return d.Fuel == 'Gasoline'}))
+		        datas.push(data.filter(function(d) {return d.Fuel == 'Gasoline' || d.Fuel == 'Diesel'}))
+		        datas.push(data)
+		        updateAvg(data, 'Gasoline');
+		        updateAvg(data, 'Diesel');
+		        updateAvg(data, 'Electricity');
+		        loadPage(0);
+		    }
+		    function updateAvg(data, fuel) {
+		        sumCity = 0;
+		        sumHighway = 0;
+		        cnt = 0;
+		        data.forEach(function(d) {
+		            if(d.Fuel == fuel) {
+		                sumCity += parseInt(d.AverageCityMPG);
+		                sumHighway += parseInt(d.AverageHighwayMPG);
+		                cnt += 1;
+		            }
+		        })
+		        avgCity.push(sumCity / cnt);
+		        avgHighway.push(sumHighway / cnt);
+		    }
+		    function clean() {
+		        d3.select("svg").selectAll("g").remove();
+		    }
+		    function drawAxes() {
+		        d3.select("svg").append("g")
+		        .attr("transform", "translate("+margin+","+(height-margin)+")")
+		        .call(d3.axisBottom(xScale));
+		        d3.select("svg").append("g")
+		        .attr("transform", "translate("+margin+","+margin+")")
+		        .call(d3.axisLeft(yScale));
+		        d3.select("svg")
+		        .append("text")
+		        .attr("x", margin)
+		        .attr("y", margin)
+		        .html("City MPG");
+		        d3.select("svg")
+		        .append("text")
+		        .attr("x", width - 100)
+		        .attr("y", height - margin - 6)
+		        .html("Highway MPG");
+		    }
+		    function drawTooltipHint() {
+		         d3.select("svg").append("g")
+		         .append("text")
+		         .attr("x", width - 400)
+		         .attr("y", height - margin - 40)
+		         .attr("fill", "gray")
+		         .html("Hover the mouse over a data poing to get more info")
+		    }
+		    function drawData(idx) {
+		        data = datas[idx];
+		        d3.select("svg").append("g")
+		        .attr("transform", "translate("+margin+","+margin+")")
+		        .selectAll("circle").data(data).enter().append("circle")
+		        .attr("cx", function(d) {return xScale(d.AverageHighwayMPG)})
+		        .attr("cy", function(d) {return yScale(d.AverageCityMPG)})
+		        .attr("r", function(d) {return 5})
+		        .style("fill", function(d){return colorMap[d.Fuel]})
+		        .style("opacity", function(d){return opacityMap[d.Fuel]})
+		        .on("mouseover", mouseover)
+                .on("mousemove", mousemove)
+                .on("mouseleave", mouseleave)
+		    }
+		    function drawAnnotation(idx, text, len) {
+		        g = d3.select("svg").append("g")
+		            .attr("transform", "translate("+margin+","+margin+")");
+		        g.append("line")
+    		        .attr("x1", xScale(avgHighway[idx]))
+    		        .attr("y1", yScale(avgCity[idx]))
+    		        .attr("x2", xScale(avgHighway[idx]))
+    		        .attr("y2", yScale(avgCity[idx]) - len)
+    		        .attr("stroke", "black");
+		        g.append("text")
+		            .attr("x", xScale(avgHighway[idx]) - 5)
+		            .attr("y", yScale(avgCity[idx]) - len - 5)
+		        .html(text);
+		    }
+		    function drawAnnotations(idx) {
+		        drawAnnotation(0, "Gasoline", height * 0.3);
+		        if (idx >= 1) drawAnnotation(1, "Diesel", height * 0.2);
+		        if (idx >= 2) drawAnnotation(2, "Electricity", height * 0.2);
+		    }
+		    function updateDescriptionText(idx) {
+		        d3.select("#desc").html(texts[idx]);
+		    }
+		    function loadPage(idx) {
+		        clean();
+		        updateDescriptionText(idx);
+		        drawAxes();
+		        drawTooltipHint();
+		        drawData(idx);
+		        drawAnnotations(idx);
+		    }
+		</script>
+	</table>
+	</body>
+</html>
